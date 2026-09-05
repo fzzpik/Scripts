@@ -1,7 +1,7 @@
 /*
 new Env('极核-ZEEHO');
 @Author: Leiyiyan
-@Date: 2026-09-4 01:55
+@Date: 2026-09-5 15:50
 
 @Description:
 极核 每日签到、积分任务
@@ -18,7 +18,7 @@ Boxjs订阅: https://raw.githubusercontent.com/leiyiyan/resource/main/subscribe/
 http-response ^https:\/\/tapi\.zeehoev\.com\/v1\.0\/mine\/cfmotoservermine\/setting script-path=https://raw.githubusercontent.com/fzzpik/Scripts/refs/heads/main/zeeho.js, requires-body=true, timeout=60, tag=极核Cookie
 
 # 脚本任务
-cron "0 7 * * *" script-path=https://raw.githubusercontent.com/fzzpik/Scripts/refs/heads/main/zeeho.js, tag=极核
+cron "0 9 * * *" script-path=https://raw.githubusercontent.com/fzzpik/Scripts/refs/heads/main/zeeho.js, tag=极核
 
 [MITM]
 hostname = tapi.zeehoev.com
@@ -89,6 +89,9 @@ async function main() {
         await $.wait(user.getRandomTime());
         // 分享动态
         await user.share(postId)
+        await $.wait(user.getRandomTime());
+        // 分享后加积分
+        await user.adjustByShare()
         await $.wait(user.getRandomTime());
         
         // 删除动态
@@ -337,6 +340,26 @@ class UserInfo {
       $.log(`⛔️ 分享失败! ${e}`);
     }
   }
+  // 分享后加积分（必须调这个接口才真正发放分享积分）
+  async adjustByShare() {
+    try {
+      const opts = {
+        url: `https://tapi.zeehoev.com/v1.0/mine/cfmotoservermine/integral/adjustByShare`,
+        type: "get",
+        headers: Object.assign(this.headers, getSign('app')),
+        dataType: "json"
+      }
+      let res = await this.fetch(opts);
+      if (res?.code == '10000') {
+        $.log(`✅ 分享积分: 已发放`);
+      } else {
+        $.log(`⛔️ 分享积分: ${res?.message || JSON.stringify(res)}`);
+      }
+    } catch (e) {
+      this.ckStatus = false;
+      $.log(`⛔️ 分享积分失败! ${e}`);
+    }
+  }
   // 删除动态
   async deletePost(postId) {
     try {
@@ -418,10 +441,13 @@ async function getCookie() {
   $.msg($.name, `🎉${newData.userName}更新token成功!`, ``);
 }
 function getSign(type, params = {}, body = null) {
-  // H5和app端现已统一使用同一套新凭证
-  const appConfig = {
+  // H5端用新密钥，app端用旧密钥（与真实App一致）
+  const appConfig = type === 'h5' ? {
     appId: "Sw5F9uJi",
     appSecret: "46870a8f678a09109468f5b0168818b91c292845"
+  } : {
+    appId: "S7qPWPU1",
+    appSecret: "c5e0da7f4da28df805694ec3dd1fc6792e9df99d"
   }
   const query = Object.keys(params).map(key => `${key}=${params[key]}`).join('&')
   const timestamp = new Date().getTime()
