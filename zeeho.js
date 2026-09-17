@@ -73,9 +73,9 @@ async function main() {
         const signRecord = await user.getSignRecord()
         const {count = 0, prize = 0} = signRecord || {}
         await $.wait(user.getRandomTime());
-        if(prize == 3) {
-          // 盲盒抽奖
-          integralScore = await user.lottery()
+        if(prize && prize <= todayStr()) {
+          // 盲盒抽奖（30天签到奖励，prize 为可开奖日期）
+          integralScore = await user.lottery(prize)
           await $.wait(user.getRandomTime());
         }
         // 创建动态
@@ -200,8 +200,9 @@ class UserInfo {
       let res = await this.fetch(opts);
       if (res?.code == '10000' && res?.message == '操作成功') {
         const count = res?.data?.signCount
-        const prize = res?.data?.prizes
-        $.log(prize == 3 ? `✅ 满足盲盒抽奖条件` : `✅ 未满足盲盒抽奖条件`)
+        // 盲盒可开奖日期：非空即可开（开完变为null）
+        const prize = res?.data?.signPrizeDate
+        $.log(prize ? `✅ 满足盲盒抽奖条件，可开奖日期: ${prize}` : `✅ 未满足盲盒抽奖条件`)
         return {count, prize}
       }
       return null
@@ -210,15 +211,14 @@ class UserInfo {
       $.log(`⛔️ 查询签到记录失败! ${e}`);
     }
   }
-  // 开启盲盒
-  async lottery() {
+  // 开启盲盒（30天签到奖励；接口为 signin/supplementPrize，参数 supplementDate=可开奖日期）
+  async lottery(supplementDate) {
     try {
       const params = {
-        boxType: 0,
-        server_name: 'SMART'
+        supplementDate
       }
       const opts = {
-        url: "https://h5.zeehoev.com/cfmotoservermine/signin/lottery",
+        url: "https://h5.zeehoev.com/cfmotoservermine/signin/supplementPrize",
         type: "get",
         headers: Object.assign(this.headers, getSign('h5', params)),
         params,
@@ -226,7 +226,7 @@ class UserInfo {
       }
       let res = await this.fetch(opts);
       if (res?.code == '10000') {
-        const integralScore = res?.data?.integralScore
+        const integralScore = res?.data?.integral
         const prizesName = res?.data?.prizesName
         $.log(`✅ 盲盒抽奖获得: ${prizesName}`);
         return integralScore
@@ -498,6 +498,11 @@ async function Request(o) {
 //生成随机数
 function randomInt(n, r) {
   return Math.round(Math.random() * (r - n) + n)
+};
+//获取今天的日期字符串 YYYY-MM-DD（用于判断盲盒是否已到开奖日）
+function todayStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 };
 //控制台打印
 function DoubleLog(data) {
