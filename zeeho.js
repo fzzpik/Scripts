@@ -1,7 +1,7 @@
 /*
 new Env('极核-ZEEHO');
 @Author: Leiyiyan
-@Date: 2026-10-11 10:20
+@Date: 2026-10-11 11:40
 
 @Description:
 极核 每日签到、积分任务
@@ -154,14 +154,10 @@ class UserInfo {
   //签到
   async signin() {
     try {
-      const params = {
-        server_name: 'SMART'
-      }
       const opts = {
         url: "https://h5.zeehoev.com/cfmotoservermine/H5/signin",
         type: "post",
-        headers: Object.assign(this.headers, getSign('h5', params)),
-        params,
+        headers: Object.assign(this.headers, getSign('h5')),
         dataType: "json"
       }
       let res = await this.fetch(opts);
@@ -187,8 +183,7 @@ class UserInfo {
   async getSignRecord() {
     try {
       const params = {
-        month: new Date().getFullYear() + '-' + (new Date().getMonth() + 1),
-        server_name: 'SMART'
+        month: new Date().getFullYear() + '-' + String(new Date().getMonth() + 1).padStart(2, '0')
       }
       const opts = {
         url: "https://h5.zeehoev.com/cfmotoservermine/H5/signin/info",
@@ -444,7 +439,7 @@ function getSign(type, params = {}, body = null) {
   // H5端用新密钥，app端用旧密钥（与真实App一致）
   const appConfig = type === 'h5' ? {
     appId: "AiTXmBrm",
-    appSecret: "46870a8f678a09109468f5b0168818b91c292845"
+    appSecret: "70c2c7458ab88ca9504ad0521f170075bc91f2f7"
   } : {
     appId: "S7qPWPU1",
     appSecret: "c5e0da7f4da28df805694ec3dd1fc6792e9df99d"
