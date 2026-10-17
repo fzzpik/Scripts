@@ -1,7 +1,7 @@
 /*
 new Env('极核-ZEEHO');
 @Author: Leiyiyan
-@Date: 2026-10-11 11:40
+@Date: 2026-10-17 11:40
 
 @Description:
 极核 每日签到、积分任务
@@ -75,7 +75,7 @@ async function main() {
         await $.wait(user.getRandomTime());
         if(prize && prize <= todayStr()) {
           // 盲盒抽奖（30天签到奖励，prize 为可开奖日期）
-          integralScore = await user.lottery(prize)
+          integralScore = await user.lottery()
           await $.wait(user.getRandomTime());
         }
         // 创建动态
@@ -206,14 +206,15 @@ class UserInfo {
       $.log(`⛔️ 查询签到记录失败! ${e}`);
     }
   }
-  // 开启盲盒（30天签到奖励；接口为 signin/supplementPrize，参数 supplementDate=可开奖日期）
-  async lottery(supplementDate) {
+  // 开启盲盒（连签奖励；官方接口为 H5/signin/lottery，参数 boxType/version）
+  async lottery() {
     try {
       const params = {
-        supplementDate
+        boxType: 0,
+        version: 'v2'
       }
       const opts = {
-        url: "https://h5.zeehoev.com/cfmotoservermine/signin/supplementPrize",
+        url: "https://h5.zeehoev.com/cfmotoservermine/H5/signin/lottery",
         type: "get",
         headers: Object.assign(this.headers, getSign('h5', params)),
         params,
@@ -221,16 +222,19 @@ class UserInfo {
       }
       let res = await this.fetch(opts);
       if (res?.code == '10000') {
-        const integralScore = res?.data?.integral
-        const prizesName = res?.data?.prizesName
+        const bd = (res?.data && res.data.signPrizesVO) || res?.data || {};
+        const integralScore = bd.integral || bd.integralScore || res?.data?.integral || 0;
+        const prizesName = bd.prizesName || (integralScore + '积分');
         $.log(`✅ 盲盒抽奖获得: ${prizesName}`);
-        return integralScore
-      }else{
-        $.log(`⛔️ 盲盒抽奖失败! ${res?.message}`);
+        return Number(integralScore);
+      } else {
+        $.log(`⚠️ 盲盒抽奖(今日可能无盲盒): ${res?.message}`);
+        return 0;
       }
     } catch (e) {
       this.ckStatus = false;
-      $.log(`⛔️ 盲盒抽奖失败! ${e}`);
+      $.log(`⛔️ 盲盒抽奖发起失败! ${e}`);
+      return 0;
     }
   }
   // 创建动态
