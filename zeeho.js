@@ -63,6 +63,8 @@ async function main() {
     for (let user of userList) {
       console.log(`🔷账号${user.index} >> Start work`)
       console.log(`随机延迟${user.getRandomTime()}ms`);
+      // 运行前查积分（用于计算本次真实获得的积分）
+      const beforeScore = await user.getSignInfo();
       // 签到
       const integral = await user.signin();
       let integralScore = 0
@@ -135,9 +137,11 @@ if(signPrizeDate && signPrizeDate <= todayStr()) {
         } else {
           $.log(`⛔️ 未获取到动态ID，跳过互动任务`);
         }
-        //查询待领取积分
+        //查询当前积分（运行后）
         const score = await user.getSignInfo();
-        $.title = `本次运行共获得${(integral + integralScore + 3)}积分`;
+        // 本次真实获得积分 = 运行后积分 - 运行前积分（覆盖签到/盲盒/点赞/评论/分享等全部任务）
+        const gained = (beforeScore != null && score != null) ? (Number(score) - Number(beforeScore)) : 0;
+        $.title = `本次运行共获得${gained}积分`;
         DoubleLog(`「${user.userName}」当前积分:${score}分,累计签到:${count}天`);
       } else {
         //将ck过期消息存入消息数组
